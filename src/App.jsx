@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import AuthScreen from './AuthScreen';
+import Dashboard from './Dashboard';
 import FilePortal from './FilePortal';
 
 function AppContent() {
   const { session, profile, loading } = useAuth();
+  const [selectedService, setSelectedService] = useState(null);
 
   if (loading) {
     return (
@@ -30,7 +33,16 @@ function AppContent() {
     );
   }
 
-  return <FilePortal />;
+  if (selectedService) {
+    return (
+      <FilePortal
+        service={selectedService}
+        onBack={() => setSelectedService(null)}
+      />
+    );
+  }
+
+  return <Dashboard onSelectService={setSelectedService} />;
 }
 
 export default function App() {
