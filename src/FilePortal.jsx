@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Upload,
-  FileText,
-  Trash2,
-  Download,
-  LogOut,
-  ShieldCheck,
-  User,
-  FolderOpen,
-  AlertCircle,
+  Upload, FileText, Trash2, Download, LogOut,
+  ShieldCheck, User, AlertCircle, ArrowLeft,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './AuthContext';
@@ -24,15 +17,11 @@ function formatBytes(bytes) {
 
 function formatDate(ts) {
   return new Date(ts).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 }
 
-export default function FilePortal() {
+export default function FilePortal({ service, onBack }) {
   const { profile, signOut } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,11 +36,10 @@ export default function FilePortal() {
   const loadFiles = async () => {
     setLoading(true);
     setError('');
-    const { data, fetchError } = await supabase
+    const { data, error: fetchError } = await supabase
       .from('files')
-      .select(
-        'id, name, storage_path, size, content_type, created_at, uploaded_by, profiles(full_name)'
-      )
+      .select('id, name, storage_path, size, content_type, created_at, uploaded_by, profiles(full_name)')
+      .eq('service_id', service.id)
       .order('created_at', { ascending: false });
 
     if (fetchError) {
@@ -65,7 +53,7 @@ export default function FilePortal() {
 
   useEffect(() => {
     loadFiles();
-  }, []);
+  }, [service.id]);
 
   const handleFileSelect = async (e) => {
     const selected = Array.from(e.target.files || []);
@@ -75,13 +63,11 @@ export default function FilePortal() {
     setError('');
 
     for (const file of selected) {
-      const path = `${profile.id}/${Date.now()}-${file.name}`;
+      const path = `${service.id}/${profile.id}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, {
-          contentType: file.type || 'application/octet-stream',
-        });
+        .upload(path, file, { contentType: file.type || 'application/octet-stream' });
 
       if (uploadError) {
         setError(`Upload failed for ${file.name}: ${uploadError.message}`);
@@ -94,12 +80,11 @@ export default function FilePortal() {
         size: file.size,
         content_type: file.type || 'application/octet-stream',
         uploaded_by: profile.id,
+        service_id: service.id,
       });
 
       if (insertError) {
-        setError(
-          `Could not save file record for ${file.name}: ${insertError.message}`
-        );
+        setError(`Could not save file record for ${file.name}: ${insertError.message}`);
       }
     }
 
@@ -122,17 +107,12 @@ export default function FilePortal() {
 
   const handleDelete = async (f) => {
     setError('');
-    const { error: storageError } = await supabase.storage
-      .from(BUCKET)
-      .remove([f.storage_path]);
+    const { error: storageError } = await supabase.storage.from(BUCKET).remove([f.storage_path]);
     if (storageError) {
       setError(`Could not delete file from storage: ${storageError.message}`);
       return;
     }
-    const { error: dbError } = await supabase
-      .from('files')
-      .delete()
-      .eq('id', f.id);
+    const { error: dbError } = await supabase.from('files').delete().eq('id', f.id);
     if (dbError) {
       setError(`Could not remove file record: ${dbError.message}`);
       return;
@@ -159,11 +139,7 @@ export default function FilePortal() {
       setError(`Could not rename file: ${updateError.message}`);
       return;
     }
-    setFiles((prev) =>
-      prev.map((file) =>
-        file.id === f.id ? { ...file, name: trimmed } : file
-      )
-    );
+    setFiles((prev) => prev.map((file) => (file.id === f.id ? { ...file, name: trimmed } : file)));
   };
 
   return (
@@ -171,29 +147,24 @@ export default function FilePortal() {
       <header className="border-b border-line sticky top-0 bg-ink/95 backdrop-blur z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gold flex items-center justify-center">
-              <FolderOpen className="w-5 h-5 text-ink" />
-            </div>
+            <button
+              onClick={onBack}
+              className="w-9 h-9 rounded-lg bg-panel border border-line flex items-center justify-center shrink-0 hover:border-gold transition-colors"
+              title="Back to dashboard"
+            >
+              <ArrowLeft className="w-4 h-4 text-gold" />
+            </button>
             <div>
-              <h1
-                className="font-semibold tracking-tight"
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
-                Base 1 Club House
+              <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+                {service.name}
               </h1>
-              <p className="text-xs text-muted">Shared shop files</p>
+              <p className="text-xs text-muted">Base One Etus's Limited</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 text-sm text-muted">
-              {isManagement ? (
-                <ShieldCheck className="w-4 h-4 text-gold" />
-              ) : (
-                <User className="w-4 h-4" />
-              )}
-              <span>
-                {profile?.full_name} · {isManagement ? 'Management' : 'Staff'}
-              </span>
+              {isManagement ? <ShieldCheck className="w-4 h-4 text-gold" /> : <User className="w-4 h-4" />}
+              <span>{profile?.full_name} · {isManagement ? 'Management' : 'Staff'}</span>
             </div>
             <button
               onClick={signOut}
@@ -219,17 +190,12 @@ export default function FilePortal() {
           />
           <label
             htmlFor="file-upload"
-            className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-xl py-10 cursor-pointer hover:border-gold hover:bg-panel transition-colors text-center ${
-              uploading ? 'opacity-60 pointer-events-none' : ''
-            }`}
+            className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-xl py-10 cursor-pointer hover:border-gold hover:bg-panel transition-colors text-center ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
           >
             <Upload className="w-6 h-6 text-gold" />
-            <span className="text-sm font-medium">
-              {uploading ? 'Uploading…' : 'Click to upload files'}
-            </span>
+            <span className="text-sm font-medium">{uploading ? 'Uploading…' : 'Click to upload files'}</span>
             <span className="text-xs text-muted">
-              Price lists, rotas, supplier docs, photos — anything the team
-              needs
+              {service.description || 'Files for this service'}
             </span>
           </label>
         </div>
@@ -249,18 +215,13 @@ export default function FilePortal() {
           {!loading && files.length === 0 && (
             <div className="text-center py-12 border border-line rounded-xl">
               <FileText className="w-8 h-8 text-faint mx-auto mb-2" />
-              <p className="text-sm text-muted">
-                No files yet. Upload something for the team to find.
-              </p>
+              <p className="text-sm text-muted">No files yet for {service.name}. Upload something for the team to find.</p>
             </div>
           )}
 
           <div className="space-y-2">
             {files.map((f) => (
-              <div
-                key={f.id}
-                className="flex items-center gap-3 bg-panel border border-line rounded-lg px-4 py-3"
-              >
+              <div key={f.id} className="flex items-center gap-3 bg-panel border border-line rounded-lg px-4 py-3">
                 <div className="w-9 h-9 rounded-md bg-ink border border-line flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4 text-gold" />
                 </div>
@@ -287,9 +248,7 @@ export default function FilePortal() {
                     </p>
                   )}
                   <p className="text-xs text-muted truncate">
-                    {formatBytes(f.size)} · uploaded by{' '}
-                    {f.profiles?.full_name ?? 'Unknown'} ·{' '}
-                    {formatDate(f.created_at)}
+                    {formatBytes(f.size)} · uploaded by {f.profiles?.full_name ?? 'Unknown'} · {formatDate(f.created_at)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -316,8 +275,7 @@ export default function FilePortal() {
         </div>
 
         <p className="text-xs text-faint text-center mt-8">
-          Files are shared with everyone signed in to this portal. Only
-          Management can delete files.
+          Files are shared with everyone signed in to this portal. Only Management can delete files.
         </p>
       </main>
     </div>
