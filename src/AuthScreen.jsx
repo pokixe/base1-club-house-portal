@@ -192,3 +192,31 @@ export default function AuthScreen() {
             {signupError && (
               <div className="flex items-start gap-2 text-sm text-danger bg-[#2A1F18] border border-[#4A3324] rounded-md px-3 py-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{signupError}</span>
+              </div>
+            )}
+            {signupSuccess && (
+              <div className="flex items-start gap-2 text-sm text-success bg-[#1B2A1E] border border-[#33452E] rounded-md px-3 py-2">
+                <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{signupSuccess}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={signupLoading}
+              className="w-full rounded-md bg-gold text-ink font-medium py-2.5 text-sm hover:bg-goldLight transition-colors disabled:opacity-60"
+            >
+              {signupLoading ? 'Creating account…' : 'Create account'}
+            </button>
+          </form>
+        )}
+
+        <p className="text-xs text-faint text-center mt-4">
+          Management can promote a staff account in the Supabase dashboard
+          (table: <code>profiles</code>, set <code>role</code> to <code>management</code>).
+        </p>
+      </div>
+    </div>
+  );
+}
