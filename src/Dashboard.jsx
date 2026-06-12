@@ -1,116 +1,60 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import {
+  Home, Utensils, Sparkles, FolderOpen, LogOut,
+  ShieldCheck, User, AlertCircle, ChevronRight,
+} from 'lucide-react';
+import { supabase } from './supabaseClient';
+import { useAuth } from './AuthContext';
 
-export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [stats, setStats] = useState({
-    members: 0,
-    files: 0,
-    events: 0,
-  });
+// Map icon name strings (stored in DB) to actual components
+const ICONS = {
+  Home,
+  Utensils,
+  Sparkles,
+  FolderOpen,
+};
+
+export default function Dashboard({ onSelectService }) {
+  const { profile, signOut } = useAuth();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const isManagement = profile?.role === 'management';
 
   useEffect(() => {
-    getUser();
-    loadStats();
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      const { data, error: fetchError } = await supabase
+        .from('services')
+        .select('id, name, description, icon')
+        .order('name', { ascending: true });
+
+      if (!mounted) return;
+      if (fetchError) {
+        setError(fetchError.message);
+        setServices([]);
+      } else {
+        setServices(data ?? []);
+      }
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
   }, []);
 
-  async function getUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    setUser(user);
-  }
-
-  async function loadStats() {
-    const { count: members } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: files } = await supabase
-      .from('files')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: events } = await supabase
-      .from('events')
-      .select('*', { count: 'exact', head: true });
-
-    setStats({
-      members: members || 0,
-      files: files || 0,
-      events: events || 0,
-    });
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    window.location.reload();
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow p-5 mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Base1 Club House Dashboard</h1>
-          <p className="text-gray-500">Welcome {user?.email}</p>
-        </div>
-
-        <button
-          onClick={signOut}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg"
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Statistics */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-white shadow rounded-xl p-6">
-          <h3 className="text-gray-500">Members</h3>
-          <p className="text-4xl font-bold">{stats.members}</p>
-        </div>
-
-        <div className="bg-white shadow rounded-xl p-6">
-          <h3 className="text-gray-500">Files</h3>
-          <p className="text-4xl font-bold">{stats.files}</p>
-        </div>
-
-        <div className="bg-white shadow rounded-xl p-6">
-          <h3 className="text-gray-500">Events</h3>
-          <p className="text-4xl font-bold">{stats.events}</p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-8 bg-white shadow rounded-xl p-6">
-        <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-
-        <div className="grid md:grid-cols-3 gap-4">
-          <button className="bg-blue-600 text-white p-4 rounded-lg">
-            Upload File
-          </button>
-
-          <button className="bg-green-600 text-white p-4 rounded-lg">
-            Add Member
-          </button>
-
-          <button className="bg-purple-600 text-white p-4 rounded-lg">
-            Create Event
-          </button>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="mt-8 bg-white shadow rounded-xl p-6">
-        <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-
-        <ul className="space-y-2">
-          <li>📁 New file uploaded</li>
-          <li>👤 New member registered</li>
-          <li>📅 Event created</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
+    <div className="min-h-screen w-full bg-ink text-cream">
+      <header className="border-b border-line sticky top-0 bg-ink/95 backdrop-blur z-10">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gold flex items-center justify-center">
+              <FolderOpen className="w-5 h-5 text-ink" />
+            </div>
+            <div>
+              <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+                Base One Etus's Limited
+              </h1>
+              <p className="text-xs text-muted">Staff portal</p>
+            </div>
+          </div>
