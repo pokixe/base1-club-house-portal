@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Lock, AlertCircle, UserPlus } from 'lucide-react';
+import { Lock, AlertCircle, ShieldCheck, UserPlus } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 export default function AuthScreen() {
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState('login'); // 'login' | 'signup'
 
+  // login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
+  // signup state
   const [suName, setSuName] = useState('');
   const [suEmail, setSuEmail] = useState('');
   const [suPassword, setSuPassword] = useState('');
@@ -77,9 +79,9 @@ export default function AuthScreen() {
             <Lock className="w-6 h-6 text-ink" />
           </div>
           <h1 className="text-2xl font-semibold text-cream tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-            Base 1 Club House
+            Base One Etus's Limited
           </h1>
-          <p className="text-muted text-sm mt-1">Staff file portal — sign in to continue</p>
+          <p className="text-muted text-sm mt-1">Staff portal — sign in to continue</p>
         </div>
 
         <div className="flex border border-line rounded-lg overflow-hidden mb-4">
@@ -170,7 +172,7 @@ export default function AuthScreen() {
                 type="password"
                 value={suPassword}
                 onChange={(e) => setSuPassword(e.target.value)}
-                placeholder="Min. 6 characters"
+                placeholder="At least 6 characters"
                 className="w-full rounded-md bg-ink border border-line text-cream px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold placeholder:text-faint"
                 autoComplete="new-password"
               />
@@ -190,31 +192,3 @@ export default function AuthScreen() {
             {signupError && (
               <div className="flex items-start gap-2 text-sm text-danger bg-[#2A1F18] border border-[#4A3324] rounded-md px-3 py-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{signupError}</span>
-              </div>
-            )}
-
-            {signupSuccess && (
-              <div className="flex items-start gap-2 text-sm text-success bg-[#1A2A18] border border-[#2A4A24] rounded-md px-3 py-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{signupSuccess}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={signupLoading}
-              className="w-full rounded-md bg-gold text-ink font-medium py-2.5 text-sm hover:bg-goldLight transition-colors disabled:opacity-60"
-            >
-              {signupLoading ? 'Creating account…' : 'Create account'}
-            </button>
-          </form>
-        )}
-
-        <p className="text-xs text-faint text-center mt-6">
-          Only authorized staff members may create accounts.
-        </p>
-      </div>
-    </div>
-  );
-}
