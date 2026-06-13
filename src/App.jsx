@@ -3,10 +3,12 @@ import { AuthProvider, useAuth } from './AuthContext';
 import AuthScreen from './AuthScreen';
 import Dashboard from './Dashboard';
 import FilePortal from './FilePortal';
+import SettingsPage from './SettingsPage';
 
 function AppContent() {
   const { session, profile, loading } = useAuth();
   const [selectedService, setSelectedService] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   if (loading) {
     return (
@@ -33,6 +35,10 @@ function AppContent() {
     );
   }
 
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />;
+  }
+
   if (selectedService) {
     return (
       <FilePortal
@@ -42,7 +48,12 @@ function AppContent() {
     );
   }
 
-  return <Dashboard onSelectService={setSelectedService} />;
+  return (
+    <Dashboard
+      onSelectService={setSelectedService}
+      onOpenSettings={() => setShowSettings(true)}
+    />
+  );
 }
 
 export default function App() {
