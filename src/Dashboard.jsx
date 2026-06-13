@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Home, Utensils, Sparkles, FolderOpen, LogOut,
-  ShieldCheck, User, AlertCircle, ChevronRight,
+  ShieldCheck, User, AlertCircle, ChevronRight, Settings,
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './AuthContext';
@@ -14,7 +14,7 @@ const ICONS = {
   FolderOpen,
 };
 
-export default function Dashboard({ onSelectService }) {
+export default function Dashboard({ onSelectService, onOpenSettings }) {
   const { profile, signOut } = useAuth();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,12 +44,17 @@ export default function Dashboard({ onSelectService }) {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-ink text-cream">
-      <header className="border-b border-line sticky top-0 bg-ink/95 backdrop-blur z-10">
+    <div
+      className="min-h-screen w-full text-cream"
+      style={{
+        background: 'linear-gradient(160deg, #0b1f33 0%, #103a5c 35%, #0F1411 75%, #2a0f1e 100%)',
+      }}
+    >
+      <header className="border-b border-line/60 sticky top-0 bg-ink/70 backdrop-blur z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gold flex items-center justify-center">
-              <FolderOpen className="w-5 h-5 text-ink" />
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/logo.jpg" alt="Base One General Mercantile logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
@@ -63,6 +68,15 @@ export default function Dashboard({ onSelectService }) {
               {isManagement ? <ShieldCheck className="w-4 h-4 text-gold" /> : <User className="w-4 h-4" />}
               <span>{profile?.full_name} · {isManagement ? 'Management' : 'Staff'}</span>
             </div>
+            {isManagement && (
+              <button
+                onClick={onOpenSettings}
+                className="w-9 h-9 rounded-md border border-line flex items-center justify-center text-muted hover:text-gold hover:border-gold transition-colors"
+                title="App settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={signOut}
               className="flex items-center gap-1.5 text-sm text-muted hover:text-cream border border-line rounded-md px-3 py-1.5 transition-colors"
@@ -101,7 +115,7 @@ export default function Dashboard({ onSelectService }) {
                 <button
                   key={service.id}
                   onClick={() => onSelectService(service)}
-                  className="flex items-center gap-4 bg-panel border border-line rounded-xl px-4 py-4 text-left hover:border-gold hover:bg-[#1C231E] transition-colors"
+                  className="flex items-center gap-4 bg-panel/80 backdrop-blur border border-line rounded-xl px-4 py-4 text-left hover:border-gold hover:bg-[#1C231E] transition-colors"
                 >
                   <div className="w-11 h-11 rounded-lg bg-ink border border-line flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-gold" />
