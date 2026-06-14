@@ -115,7 +115,7 @@ export default function AuthScreen() {
             <img src="/logo.jpg" alt="Base One General Mercantile logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-semibold text-cream tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-            Base One Etus's Limited
+            Base One General Mercantile
           </h1>
           <p className="text-muted text-sm mt-1">Staff portal — sign in to continue</p>
         </div>
