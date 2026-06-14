@@ -44,7 +44,7 @@ export default function SettingsPage({ onBack }) {
             <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
               App Settings
             </h1>
-            <p className="text-xs text-muted">Base One Etus's Limited</p>
+            <p className="text-xs text-muted">Base One General Mercantile</p>
           </div>
         </div>
       </header>
