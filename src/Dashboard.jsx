@@ -96,7 +96,7 @@ export default function Dashboard({ onSelectService, onOpenSettings }) {
             </div>
             <div>
               <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-                Base One Etus's Limited
+                Base One General Mercantile
               </h1>
               <p className="text-xs text-muted">Staff portal</p>
             </div>
