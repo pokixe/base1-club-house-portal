@@ -1,257 +1,221 @@
-import { useEffect, useState } from 'react';
-import {
-  Home, Utensils, Sparkles, FolderOpen, LogOut,
-  ShieldCheck, User, AlertCircle, ChevronRight, Settings, FileText, Clock,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertCircle, ShieldCheck, UserPlus, Mail } from 'lucide-react';
 import { supabase } from './supabaseClient';
-import { useAuth } from './AuthContext';
 
-const ICONS = { Home, Utensils, Sparkles, FolderOpen };
+export default function AuthScreen() {
+  const [mode, setMode] = useState('login');
+  const [mounted, setMounted] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [suName, setSuName] = useState('');
+  const [suEmail, setSuEmail] = useState('');
+  const [suPassword, setSuPassword] = useState('');
+  const [suConfirm, setSuConfirm] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
-function formatRelativeTime(ts) {
-  const diffMs = Date.now() - new Date(ts).getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
+  useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
 
-export default function Dashboard({ onSelectService, onOpenSettings }) {
-  const { profile, signOut } = useAuth();
-  const [services, setServices] = useState([]);
-  const [fileStats, setFileStats] = useState({});
-  const [recentFiles, setRecentFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [visible, setVisible] = useState(false);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoginLoading(false);
+    if (error) setLoginError(error.message);
+  };
 
-  const isManagement = profile?.role === 'management';
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setSignupError(''); setSignupSuccess('');
+    if (!suName.trim() || !suEmail.trim() || !suPassword) { setSignupError('Please fill in all fields.'); return; }
+    if (suPassword !== suConfirm) { setSignupError('Passwords do not match.'); return; }
+    if (suPassword.length < 6) { setSignupError('Password must be at least 6 characters.'); return; }
+    setSignupLoading(true);
+    const { error } = await supabase.auth.signUp({ email: suEmail.trim(), password: suPassword, options: { data: { full_name: suName.trim() } } });
+    setSignupLoading(false);
+    if (error) { setSignupError(error.message); return; }
+    setSignupSuccess('Account created. Check your email to confirm, then sign in.');
+    setSuName(''); setSuEmail(''); setSuPassword(''); setSuConfirm('');
+  };
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      setError('');
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setResetError(''); setResetSuccess('');
+    if (!resetEmail.trim()) { setResetError('Please enter your email address.'); return; }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), { redirectTo: window.location.origin });
+    setResetLoading(false);
+    if (error) { setResetError(error.message); return; }
+    setResetSuccess('If an account exists, a reset link has been sent.');
+    setResetEmail('');
+  };
 
-      const [servicesRes, filesRes] = await Promise.all([
-        supabase.from('services').select('id, name, description, icon').order('name', { ascending: true }),
-        supabase.from('files').select('id, name, service_id, created_at, profiles(full_name)').order('created_at', { ascending: false }),
-      ]);
+  const inputStyle = {
+    width: '100%', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 10, color: '#E8E4DC', padding: '10px 14px', fontSize: 13,
+    outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s', boxSizing: 'border-box',
+  };
 
-      if (!mounted) return;
-
-      if (servicesRes.error) {
-        setError(servicesRes.error.message);
-        setServices([]);
-      } else {
-        setServices(servicesRes.data ?? []);
-      }
-
-      if (!filesRes.error) {
-        const allFiles = filesRes.data ?? [];
-        const stats = {};
-        for (const f of allFiles) {
-          if (!stats[f.service_id]) stats[f.service_id] = { count: 0, lastUpload: f.created_at };
-          stats[f.service_id].count += 1;
-        }
-        setFileStats(stats);
-        setRecentFiles(allFiles.slice(0, 5));
-      }
-
-      setLoading(false);
-      setTimeout(() => setVisible(true), 50);
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const labelStyle = { display: 'block', fontSize: 10, color: '#7A9180', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 };
 
   return (
-    <div
-      className="min-h-screen w-full text-cream"
-      style={{ background: 'linear-gradient(160deg, #0b1f33 0%, #103a5c 35%, #0F1411 75%, #2a0f1e 100%)' }}
-    >
-      {/* Animated background orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #C8A24A, transparent)', animation: 'float 8s ease-in-out infinite' }} />
-        <div className="absolute top-1/2 -right-40 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #103a5c, transparent)', animation: 'float 10s ease-in-out infinite reverse' }} />
-        <div className="absolute -bottom-20 left-1/3 w-64 h-64 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #2a0f1e, transparent)', animation: 'float 12s ease-in-out infinite' }} />
-      </div>
-
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, position: 'relative', overflow: 'hidden',
+      background: 'linear-gradient(175deg, #0A1628 0%, #0f2240 40%, #111918 70%, #1C0A14 100%)',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+    }}>
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-30px) scale(1.05); }
+        @keyframes orb { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-15px) scale(1.04)} 66%{transform:translate(-10px,10px) scale(0.97)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes logoPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,168,67,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,168,67,0)} }
+        @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .auth-fade { animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+        .d1{animation-delay:0s} .d2{animation-delay:0.08s} .d3{animation-delay:0.16s} .d4{animation-delay:0.24s}
+        .logo-pulse { animation: logoPulse 2.5s ease-in-out infinite; }
+        .gold-text {
+          background: linear-gradient(90deg, #D4A843 0%, #F0CC6E 50%, #D4A843 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          background-clip: text; animation: shimmer 4s linear infinite;
         }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .fade-in-up { animation: fadeInUp 0.5s ease forwards; }
-        .fade-in { animation: fadeIn 0.4s ease forwards; }
-        .stagger-1 { animation-delay: 0.05s; opacity: 0; }
-        .stagger-2 { animation-delay: 0.1s; opacity: 0; }
-        .stagger-3 { animation-delay: 0.15s; opacity: 0; }
-        .stagger-4 { animation-delay: 0.2s; opacity: 0; }
-        .stagger-5 { animation-delay: 0.25s; opacity: 0; }
-        .stagger-6 { animation-delay: 0.3s; opacity: 0; }
-        .card-hover { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .card-hover:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 8px 30px rgba(200,162,74,0.15); border-color: #C8A24A; }
-        .card-hover:active { transform: translateY(-1px) scale(0.99); }
+        .auth-input:focus { border-color: rgba(212,168,67,0.5) !important; box-shadow: 0 0 0 3px rgba(212,168,67,0.08) !important; }
+        .auth-btn { transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease; }
+        .auth-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(212,168,67,0.25); }
+        .auth-btn:active:not(:disabled) { transform: scale(0.98); }
+        .spinner { animation: spin 0.7s linear infinite; }
+        .tab-btn { transition: background 0.2s, color 0.2s; }
       `}</style>
 
-      <header className="border-b border-line/60 sticky top-0 bg-ink/70 backdrop-blur z-10 fade-in">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0"
-              style={{ boxShadow: '0 0 0 2px #C8A24A44' }}>
-              <img src="/logo.jpg" alt="Base One General Mercantile logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h1 className="font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-                Base One General Mercantile
-              </h1>
-              <p className="text-xs text-muted">Staff portal</p>
+      {/* Orbs */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle at 40% 40%, #D4A843, transparent 70%)', opacity: 0.07, animation: 'orb 14s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle at 60% 60%, #1a4a8a, transparent 70%)', opacity: 0.06, animation: 'orb 18s ease-in-out infinite reverse' }} />
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 380, position: 'relative', opacity: mounted ? 1 : 0, transition: 'opacity 0.4s ease' }}>
+
+        {/* Logo + brand */}
+        <div className="auth-fade d1 text-center" style={{ marginBottom: 28 }}>
+          <div className="logo-pulse" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 88, height: 88, borderRadius: '50%', background: 'white', overflow: 'hidden', border: '3px solid #D4A843', marginBottom: 16 }}>
+            <img src="/logo.jpg" alt="Base One General Mercantile" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <div>
+            <h1 className="gold-text" style={{ fontSize: 20, fontFamily: 'Georgia, serif', fontWeight: 700, marginBottom: 4 }}>
+              Base One General Mercantile
+            </h1>
+            <div style={{ fontSize: 10, color: '#4A6055', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              Staff Portal · BN033142
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-sm text-muted">
-              {isManagement ? <ShieldCheck className="w-4 h-4 text-gold" /> : <User className="w-4 h-4" />}
-              <span>{profile?.full_name} · {isManagement ? 'Management' : 'Staff'}</span>
-            </div>
-            {isManagement && (
-              <button
-                onClick={onOpenSettings}
-                className="w-9 h-9 rounded-md border border-line flex items-center justify-center text-muted hover:text-gold hover:border-gold transition-all duration-300 hover:rotate-45"
-                title="App settings"
-              >
-                <Settings className="w-4 h-4" />
+        </div>
+
+        {/* Tabs */}
+        {mode !== 'reset' && (
+          <div className="auth-fade d2" style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
+            {[['login', 'Sign in'], ['signup', 'Create account']].map(([m, label]) => (
+              <button key={m} className="tab-btn" onClick={() => { setMode(m); setLoginError(''); setSignupError(''); setSignupSuccess(''); }}
+                style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 600, letterSpacing: '0.03em', border: 'none', cursor: 'pointer', background: mode === m ? '#D4A843' : 'transparent', color: mode === m ? '#0A1628' : '#7A9180' }}>
+                {label}
               </button>
-            )}
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 text-sm text-muted hover:text-cream border border-line rounded-md px-3 py-1.5 transition-all duration-200 hover:border-muted"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-6 relative">
-        <div className={`mb-6 fade-in-up stagger-1 ${visible ? '' : 'opacity-0'}`}>
-          <h2 className="text-lg font-semibold tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
-            Services
-          </h2>
-          <p className="text-sm text-muted mt-1">Choose a service to view and manage its files.</p>
-        </div>
-
-        {error && (
-          <div className="flex items-start gap-2 text-sm text-danger bg-[#2A1F18] border border-[#4A3324] rounded-md px-3 py-2 mb-4 fade-in">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-4 bg-panel/50 border border-line rounded-xl px-4 py-4 animate-pulse">
-                <div className="w-11 h-11 rounded-lg bg-line shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-24 bg-line rounded" />
-                  <div className="h-2 w-32 bg-line/70 rounded" />
-                </div>
-              </div>
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {services.map((service, idx) => {
-              const Icon = ICONS[service.icon] || FolderOpen;
-              const stats = fileStats[service.id];
-              return (
-                <button
-                  key={service.id}
-                  onClick={() => onSelectService(service)}
-                  className={`card-hover flex items-center gap-4 bg-panel/80 backdrop-blur border border-line rounded-xl px-4 py-4 text-left fade-in-up stagger-${idx + 2} ${visible ? '' : 'opacity-0'}`}
-                >
-                  <div className="w-11 h-11 rounded-lg bg-ink border border-line flex items-center justify-center shrink-0">
-                    <Icon className="w-5 h-5 text-gold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{service.name}</p>
-                      {stats?.count > 0 && (
-                        <span className="text-xs bg-ink border border-line rounded-full px-2 py-0.5 text-gold shrink-0">
-                          {stats.count}
-                        </span>
-                      )}
-                    </div>
-                    {service.description && (
-                      <p className="text-xs text-muted truncate">{service.description}</p>
-                    )}
-                    {stats?.lastUpload && (
-                      <p className="text-xs text-faint mt-0.5">Last upload {formatRelativeTime(stats.lastUpload)}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-faint shrink-0" />
-                </button>
-              );
-            })}
-          </div>
         )}
 
-        {!loading && services.length === 0 && !error && (
-          <div className="text-center py-12 border border-line rounded-xl fade-in">
-            <FolderOpen className="w-8 h-8 text-faint mx-auto mb-2" />
-            <p className="text-sm text-muted">No services have been set up yet.</p>
-          </div>
-        )}
+        {/* Card */}
+        <div className="auth-fade d3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, backdropFilter: 'blur(20px)' }}>
 
-        {/* Recent Activity */}
-        {!loading && recentFiles.length > 0 && (
-          <div className={`mt-8 fade-in-up ${visible ? '' : 'opacity-0'}`} style={{ animationDelay: '0.4s' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-gold" />
-              <h2 className="text-sm font-medium text-muted uppercase tracking-wide">Recent activity</h2>
-            </div>
-            <div className="bg-panel/80 backdrop-blur border border-line rounded-xl divide-y divide-line overflow-hidden">
-              {recentFiles.map((f, idx) => {
-                const service = services.find((s) => s.id === f.service_id);
-                const Icon = service ? (ICONS[service.icon] || FolderOpen) : FileText;
-                return (
-                  <div
-                    key={f.id}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-ink/40"
-                    style={{ animationDelay: `${0.45 + idx * 0.05}s` }}
-                  >
-                    <div className="w-8 h-8 rounded-md bg-ink border border-line flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-gold" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{f.name}</p>
-                      <p className="text-xs text-muted truncate">
-                        {service?.name ?? 'Unknown'} · {f.profiles?.full_name ?? 'Unknown'} · {formatRelativeTime(f.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </main>
+          {mode === 'login' && (
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { label: 'Email address', value: email, onChange: setEmail, type: 'email', placeholder: 'you@example.com', autoComplete: 'email' },
+                { label: 'Password', value: password, onChange: setPassword, type: 'password', placeholder: '••••••••', autoComplete: 'current-password' },
+              ].map(({ label, value, onChange, type, placeholder, autoComplete }) => (
+                <div key={label}>
+                  <label style={labelStyle}>{label}</label>
+                  <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete={autoComplete}
+                    className="auth-input" style={inputStyle} />
+                </div>
+              ))}
+              {loginError && <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#E08E6D', background: 'rgba(42,31,24,0.8)', border: '1px solid #4A3324', borderRadius: 8, padding: '8px 12px' }}><AlertCircle style={{ width: 13, height: 13, marginTop: 1, flexShrink: 0 }} />{loginError}</div>}
+              <button type="submit" disabled={loginLoading} className="auth-btn"
+                style={{ width: '100%', background: '#D4A843', color: '#0A1628', border: 'none', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', cursor: loginLoading ? 'wait' : 'pointer', opacity: loginLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {loginLoading ? <><svg className="spinner" style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" strokeOpacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>Signing in…</> : 'Sign in'}
+              </button>
+              <button type="button" onClick={() => { setMode('reset'); setLoginError(''); }}
+                style={{ background: 'none', border: 'none', color: '#4A6055', fontSize: 11, cursor: 'pointer', textAlign: 'center', letterSpacing: '0.03em', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#D4A843'} onMouseLeave={e => e.currentTarget.style.color = '#4A6055'}>
+                Forgot your password?
+              </button>
+            </form>
+          )}
+
+          {mode === 'signup' && (
+            <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#7A9180', marginBottom: 2 }}>
+                <UserPlus style={{ width: 12, height: 12, color: '#D4A843' }} />New accounts start with Staff role
+              </div>
+              {[
+                { label: 'Full name', value: suName, onChange: setSuName, type: 'text', placeholder: 'e.g. Daniel Okafor' },
+                { label: 'Email address', value: suEmail, onChange: setSuEmail, type: 'email', placeholder: 'you@example.com' },
+                { label: 'Password', value: suPassword, onChange: setSuPassword, type: 'password', placeholder: 'At least 6 characters' },
+                { label: 'Confirm password', value: suConfirm, onChange: setSuConfirm, type: 'password', placeholder: '••••••••' },
+              ].map(({ label, value, onChange, type, placeholder }) => (
+                <div key={label}>
+                  <label style={labelStyle}>{label}</label>
+                  <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+                    className="auth-input" style={inputStyle} />
+                </div>
+              ))}
+              {signupError && <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#E08E6D', background: 'rgba(42,31,24,0.8)', border: '1px solid #4A3324', borderRadius: 8, padding: '8px 12px' }}><AlertCircle style={{ width: 13, height: 13, marginTop: 1, flexShrink: 0 }} />{signupError}</div>}
+              {signupSuccess && <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#9FCB8D', background: 'rgba(27,42,30,0.8)', border: '1px solid #33452E', borderRadius: 8, padding: '8px 12px' }}><ShieldCheck style={{ width: 13, height: 13, marginTop: 1, flexShrink: 0 }} />{signupSuccess}</div>}
+              <button type="submit" disabled={signupLoading} className="auth-btn"
+                style={{ width: '100%', background: '#D4A843', color: '#0A1628', border: 'none', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', cursor: signupLoading ? 'wait' : 'pointer', opacity: signupLoading ? 0.7 : 1, marginTop: 2 }}>
+                {signupLoading ? 'Creating account…' : 'Create account'}
+              </button>
+            </form>
+          )}
+
+          {mode === 'reset' && (
+            <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#7A9180', marginBottom: 2 }}>
+                <Mail style={{ width: 12, height: 12, color: '#D4A843' }} />Password reset
+              </div>
+              <p style={{ fontSize: 12, color: '#4A6055', margin: 0 }}>Enter your email and we'll send a reset link.</p>
+              <div>
+                <label style={labelStyle}>Email address</label>
+                <input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} placeholder="you@example.com"
+                  className="auth-input" style={inputStyle} />
+              </div>
+              {resetError && <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#E08E6D', background: 'rgba(42,31,24,0.8)', border: '1px solid #4A3324', borderRadius: 8, padding: '8px 12px' }}><AlertCircle style={{ width: 13, height: 13, marginTop: 1, flexShrink: 0 }} />{resetError}</div>}
+              {resetSuccess && <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#9FCB8D', background: 'rgba(27,42,30,0.8)', border: '1px solid #33452E', borderRadius: 8, padding: '8px 12px' }}><ShieldCheck style={{ width: 13, height: 13, marginTop: 1, flexShrink: 0 }} />{resetSuccess}</div>}
+              <button type="submit" disabled={resetLoading} className="auth-btn"
+                style={{ width: '100%', background: '#D4A843', color: '#0A1628', border: 'none', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', cursor: resetLoading ? 'wait' : 'pointer', opacity: resetLoading ? 0.7 : 1 }}>
+                {resetLoading ? 'Sending…' : 'Send reset link'}
+              </button>
+              <button type="button" onClick={() => { setMode('login'); setResetError(''); setResetSuccess(''); }}
+                style={{ background: 'none', border: 'none', color: '#4A6055', fontSize: 11, cursor: 'pointer', textAlign: 'center', letterSpacing: '0.03em', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#D4A843'} onMouseLeave={e => e.currentTarget.style.color = '#4A6055'}>
+                Back to sign in
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className="auth-fade d4" style={{ textAlign: 'center', marginTop: 16, fontSize: 10, color: '#2A3A2A', letterSpacing: '0.1em' }}>
+          BASE ONE GENERAL MERCANTILE · BN033142
+        </div>
+      </div>
     </div>
   );
-      }
+    }
+          
